@@ -21,6 +21,8 @@ public class xBots_Drive extends OpMode {
     DcMotor frontRightDrive;
     DcMotor backLeftDrive;
     DcMotor backRightDrive;
+    DcMotor flywheel;
+
 
     // goBILDA Pinpoint Odometry Computer
     GoBildaPinpointDriver odo;
@@ -35,6 +37,7 @@ public class xBots_Drive extends OpMode {
         frontRightDrive = hardwareMap.get(DcMotor.class, "motorFR");
         backLeftDrive = hardwareMap.get(DcMotor.class, "motorBL");
         backRightDrive = hardwareMap.get(DcMotor.class, "motorBR");
+        flywheel = hardwareMap.get(DcMotor.class, "flywheel");
         //Servos
 
         //Sensors
@@ -58,6 +61,7 @@ public class xBots_Drive extends OpMode {
     }
 
     @Override
+    //////////////////////////ADD TELEOP CODE HERE////////////////////////////////////
     public void loop() {
         telemetry.addLine("Press Back to reset Yaw");
         telemetry.addLine("Hold left bumper to drive in robot relative");
@@ -72,7 +76,7 @@ public class xBots_Drive extends OpMode {
         telemetry.update();
 
 
-
+        ////////////DRIVE CODE//////////////
         // If you press the A button, then you reset the Yaw to be zero from the way
         // the robot is currently pointing
         if (gamepad1.back) {
@@ -94,7 +98,14 @@ public class xBots_Drive extends OpMode {
                 driveFieldRelative(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
         }// Ends Drive If else statements
 
+    //////////////   LAUNCHER   //////////////
+        flywheel.setPower(gamepad2.left_stick_y * -1);
+
+
     }// ends Teleop Loop
+
+
+////////////////////////FUNCTIONS FOR TELEPOP////////////////////////////////////////////////
 
     // This routine drives the robot field relative
     private void driveFieldRelative(double forward, double right, double rotate) {
