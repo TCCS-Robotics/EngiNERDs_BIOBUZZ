@@ -1,33 +1,27 @@
-
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-
-@TeleOp(name = "Field Centric Test", group = "Robot")
+@TeleOp(name = "Field and Robot Relative with Imu", group = "Robot")
 //@Disabled
-public class Field_Centric_Test extends OpMode {
+public class Field_Relative_IMU extends OpMode {
     // This declares the four motors needed
     DcMotor frontLeftDrive;
     DcMotor frontRightDrive;
     DcMotor backLeftDrive;
     DcMotor backRightDrive;
 
-    //Servos
-
-
-
-    //Sensors
-    GoBildaPinpointDriver odo = hardwareMap.get(GoBildaPinpointDriver.class,"odo");
+    // This declares the IMU needed to get the current direction the robot is facing
+    IMU imu;
 
     @Override
+    //////////////////////// Initialization //////////////////////////////
     public void init() {
         frontLeftDrive = hardwareMap.get(DcMotor.class, "motorFL");
         frontRightDrive = hardwareMap.get(DcMotor.class, "motorFR");
@@ -36,23 +30,25 @@ public class Field_Centric_Test extends OpMode {
 
         // We set the left motors in reverse which is needed for drive trains where the left
         // motors are opposite to the right ones.
-        backRightDrive.setDirection(DcMotor.Direction.REVERSE);
-        frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
-
-        // This uses RUN_USING_ENCODER to be more accurate.   If you don't have the encoder
-        // wires, you should remove these
-        frontLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        frontRightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backRightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
+        frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
 
 
-        odo.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);
-        odo.resetPosAndIMU();
 
+        imu = hardwareMap.get(IMU.class, "imu");
+        // This needs to be changed to match the orientation on your robot
+        RevHubOrientationOnRobot.LogoFacingDirection logoDirection =
+                RevHubOrientationOnRobot.LogoFacingDirection.DOWN;
+        RevHubOrientationOnRobot.UsbFacingDirection usbDirection =
+                RevHubOrientationOnRobot.UsbFacingDirection.RIGHT;
+
+        RevHubOrientationOnRobot orientationOnRobot = new
+                RevHubOrientationOnRobot(logoDirection, usbDirection);
+        imu.initialize(new IMU.Parameters(orientationOnRobot));
     }
 
     @Override
+    /////////////// TeleOp Loop ////////////////////////////////////
     public void loop() {
         telemetry.addLine("Press Back to reset Yaw");
         telemetry.addLine("Hold left bumper to drive in robot relative");
@@ -62,7 +58,7 @@ public class Field_Centric_Test extends OpMode {
         // If you press the A button, then you reset the Yaw to be zero from the way
         // the robot is currently pointing
         if (gamepad1.a) {
-            odo.resetPosAndIMU();
+            imu.resetYaw();
         }
         // If you press the left bumper, you get a drive from the point of view of the robot
         // (much like driving an RC vehicle)
@@ -71,7 +67,9 @@ public class Field_Centric_Test extends OpMode {
         } else {
             driveFieldRelative(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
         }
-    }
+    }//Closes TeleOp Look
+
+////////////////////////////////// ENTER FUNCTIONS HERE//////////////////////////////////////
 
     // This routine drives the robot field relative
     private void driveFieldRelative(double forward, double right, double rotate) {
@@ -81,8 +79,7 @@ public class Field_Centric_Test extends OpMode {
 
         // Second, rotate angle by the angle the robot is pointing
         theta = AngleUnit.normalizeRadians(theta -
-
-                odo.getHeading(AngleUnit.RADIANS));
+                imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
 
         // Third, convert back to cartesian
         double newForward = r * Math.sin(theta);
@@ -92,7 +89,7 @@ public class Field_Centric_Test extends OpMode {
         drive(newForward, newRight, rotate);
     }
 
-    // Thanks to FTC16072 for sharing this code!!
+    //This is the Robot Relative Drive
     public void drive(double forward, double right, double rotate) {
         // This calculates the power needed for each wheel based on the amount of forward,
         // strafe right, and rotate
@@ -120,4 +117,5 @@ public class Field_Centric_Test extends OpMode {
         backLeftDrive.setPower(maxSpeed * (backLeftPower / maxPower));
         backRightDrive.setPower(maxSpeed * (backRightPower / maxPower));
     }
-}
+
+}//Closes Op Mode

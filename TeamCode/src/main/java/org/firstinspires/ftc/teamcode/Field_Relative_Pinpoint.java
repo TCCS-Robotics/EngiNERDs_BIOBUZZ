@@ -1,89 +1,97 @@
-
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
+
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-
-import static  org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
-import static  org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
+import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
-
-
-@TeleOp(name = "xBots_Drive_Pinpoint", group = "Robot")
+@TeleOp(name = "Field and Robot Relative_Pinpoint", group = "Robot")
 //@Disabled
-public class xBots_Drive extends OpMode {
-    // This declares the four motors needed
+public class Field_Relative_Pinpoint extends OpMode {
+    //Declare Hardware
+
+    // Motors - format DcMotor What_You_Name_It
     DcMotor frontLeftDrive;
     DcMotor frontRightDrive;
     DcMotor backLeftDrive;
     DcMotor backRightDrive;
-    DcMotor flywheel;
+    //DcMotor flywheel;
 
 
-    // goBILDA Pinpoint Odometry Computer
+
+    //Servos - Format Servo What_You_Name_It or CRSERVO What_You_Name_It (for Continuous Rotation Servos)
+
+
+    //Sensors
     GoBildaPinpointDriver odo;
 
-
     @Override
+    //////////////////////// Initialization //////////////////////////////
     public void init() {
 
-        /////////////////////////////////Hardware Map///////////////////////////////
+    /////////////////////////////////Hardware Map///////////////////////////////
         //Motors
         frontLeftDrive = hardwareMap.get(DcMotor.class, "motorFL");
         frontRightDrive = hardwareMap.get(DcMotor.class, "motorFR");
         backLeftDrive = hardwareMap.get(DcMotor.class, "motorBL");
         backRightDrive = hardwareMap.get(DcMotor.class, "motorBR");
-        flywheel = hardwareMap.get(DcMotor.class, "flywheel");
+       // flywheel = hardwareMap.get(DcMotor.class, "flywheel");
+
         //Servos
 
         //Sensors
-        odo = hardwareMap.get(GoBildaPinpointDriver.class, "odo");
+        odo = hardwareMap.get(GoBildaPinpointDriver.class,"odo");
 
 
         /*Set Motor Directions so all wheels rotate forward with positive power values
             This will be DIFFERENT on EACH ROBOT depending on wheel and motor placement*/
-        backRightDrive.setDirection(DcMotor.Direction.REVERSE);
-        frontRightDrive.setDirection(DcMotor.Direction.REVERSE);
-
-        // This uses RUN_USING_ENCODER to be more accurate.
-        frontLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        frontRightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backLeftDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backRightDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backLeftDrive.setDirection(DcMotor.Direction.REVERSE);
+        frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
 
         // Reset the Pinpoint position
         odo.resetPosAndIMU();
-
     }
 
     @Override
-    //////////////////////////ADD TELEOP CODE HERE////////////////////////////////////
+    /////////////// TeleOp Loop ////////////////////////////////////
     public void loop() {
         telemetry.addLine("Press Back to reset Yaw");
-        telemetry.addLine("Hold left bumper to drive in robot relative");
-        telemetry.addLine("The left joystick sets the robot direction");
-        telemetry.addLine("Moving the right joystick left and right turns the robot");
-        telemetry.addLine("Right Trigger puts the robot into slow mode");
+        telemetry.addLine("Hold Left Bumper for Robot Centric");
+        telemetry.addLine("Hold Right Trigger for Slow Mode");
+        telemetry.addLine("Left joystick sets robot direction");
+        telemetry.addLine("Right joystick turns the robot");
 
         //Update Pinpoint Telemetry
         odo.update();
-        telemetry.addData("Heading",odo.getHeading(AngleUnit.DEGREES));
-
-        telemetry.update();
+        telemetry.addData("Heading",odo.getHeading(AngleUnit.RADIANS));
 
 
-        ////////////DRIVE CODE//////////////
-        // If you press the A button, then you reset the Yaw to be zero from the way
-        // the robot is currently pointing
-        if (gamepad1.back) {
+    //////////////   LAUNCHER   //////////////
+        //flywheel.setPower(gamepad2.left_stick_y * -1);
+
+
+
+    ////////////////////////    Drive Code        //////////////////////////
+                                    /*
+                                    Left Bumper = Robot Centric
+                                    Right Trigger = Slow Mode
+                                    Back BUtton = Reset Yaw
+                                     */
+
+        //Reset the Yaw with the Back Button
+        if (gamepad1.a) {
             odo.resetPosAndIMU();
         }
-        // If you press the left bumper, you get a drive from the point of view of the robot
-        // (much like driving an RC vehicle)
+
+        //Drive Functions Calles
         if (gamepad1.left_bumper && gamepad1.right_trigger > 0) {
             drive(-gamepad1.left_stick_y *.10, gamepad1.left_stick_x *.10, gamepad1.right_stick_x *.10);
         }
@@ -95,21 +103,16 @@ public class xBots_Drive extends OpMode {
             driveFieldRelative(-gamepad1.left_stick_y *.10, gamepad1.left_stick_x *.10, gamepad1.right_stick_x *.10);
         }
         else {
-                driveFieldRelative(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
+            driveFieldRelative(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
         }// Ends Drive If else statements
 
-    //////////////   LAUNCHER   //////////////
-        flywheel.setPower(gamepad2.left_stick_y * -1);
+    }//Closes TeleOp Look
 
-
-    }// ends Teleop Loop
-
-
-////////////////////////FUNCTIONS FOR TELEPOP////////////////////////////////////////////////
+////////////////////////////////// ENTER FUNCTIONS HERE//////////////////////////////////////
 
     // This routine drives the robot field relative
     private void driveFieldRelative(double forward, double right, double rotate) {
-        // Convert joystick input to polar coordinates
+        // First, convert direction being asked to drive to polar coordinates
         double theta = Math.atan2(forward, right);
         double r = Math.hypot(right, forward);
 
@@ -119,18 +122,15 @@ public class xBots_Drive extends OpMode {
         // Rotate joystick vector by robot heading
         theta = normalizeRadians(theta - heading);
 
-        // Convert back to Cartesian coordinates
+        // Third, convert back to cartesian
         double newForward = r * Math.sin(theta);
         double newRight = r * Math.cos(theta);
-
-        // Drive robot-relative
-        drive(newForward, newRight, rotate);
 
         // Finally, call the drive method with robot relative forward and right amounts
         drive(newForward, newRight, rotate);
     }
 
-    // Thanks to FTC16072 for sharing this code!!
+    //This is the Robot Relative Drive
     public void drive(double forward, double right, double rotate) {
         // This calculates the power needed for each wheel based on the amount of forward,
         // strafe right, and rotate
@@ -158,4 +158,5 @@ public class xBots_Drive extends OpMode {
         backLeftDrive.setPower(maxSpeed * (backLeftPower / maxPower));
         backRightDrive.setPower(maxSpeed * (backRightPower / maxPower));
     }
-}
+
+}//Closes Op Mode
