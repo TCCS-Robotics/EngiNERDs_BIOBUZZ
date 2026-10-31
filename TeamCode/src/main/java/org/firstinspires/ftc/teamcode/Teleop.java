@@ -4,8 +4,8 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.teamcode.MecanumDrive;
-import org.firstinspires.ftc.teamcode.RobotHardware;
+import org.firstinspires.ftc.teamcode.SharedClasses.MecanumDrive_Smooth;
+import org.firstinspires.ftc.teamcode.SharedClasses.RobotHardware;
 
 
 @TeleOp(name = "TeleOp", group = "Robot")
@@ -13,7 +13,7 @@ import org.firstinspires.ftc.teamcode.RobotHardware;
 public class Teleop extends OpMode {
     //Import Hardware Class & Mecanum Drive Class
     RobotHardware robot = new RobotHardware();
-    MecanumDrive drive;
+    MecanumDrive_Smooth drive;
 
     //Variables
     private boolean previousResetButton = false;
@@ -24,7 +24,7 @@ public class Teleop extends OpMode {
     public void init() {
     //Initialize Hardware and Mecanum Drive Classes
         robot.init(hardwareMap);
-        drive = new MecanumDrive(robot);
+        drive = new MecanumDrive_Smooth(robot);
 
    }
 
