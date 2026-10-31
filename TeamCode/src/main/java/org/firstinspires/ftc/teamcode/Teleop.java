@@ -37,6 +37,14 @@ public class Teleop extends OpMode {
 
 
     //////////////   LAUNCHER   //////////////
+    if (gamepad1.left_trigger > 0) {
+        robot.motorFlywheel.setPower(.5);
+    }
+    else {
+        robot.motorFlywheel.setPower(0);
+    }
+
+    //////////////   INTAKE   //////////////
 
 
 
@@ -66,6 +74,22 @@ public class Teleop extends OpMode {
             drive.driveRobotRelative(forward, right, rotate);
         } else {
             drive.driveFieldRelative(forward, right, rotate);
+        }
+
+        if (gamepad2.right_trigger > 0 && gamepad2.left_trigger == 0) {
+            robot.motorIntake.setPower(1);
+            robot.servoIB.setPosition(.1);
+            robot.servoIF.setPosition(.9);
+        }
+        else if (gamepad2.left_trigger > 0 && gamepad2.right_trigger == 0) {
+            robot.motorIntake.setPower(-1);
+            robot.servoIB.setPosition(.9);
+            robot.servoIF.setPosition(.1);
+        }
+        else {
+                robot.motorIntake.setPower(0);
+                robot.servoIB.setPosition(.5);
+                robot.servoIF.setPosition(.5);
         }
 
 

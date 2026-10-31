@@ -2,7 +2,9 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 
 public class RobotHardware {
     //DcMotorEx has extended capabilities like velocity control
@@ -13,10 +15,15 @@ public class RobotHardware {
     public DcMotor backLeftDrive;
     public DcMotor backRightDrive;
 
-    //Mechanism Motors
 
+    //Mechanism Motors
+    public DcMotor motorIntake;
+    public DcMotor motorTurret;
+    public DcMotor motorFlywheel;
 
     //Servos -  Format  - public Servo name; - or public CRServo name; -
+    public Servo servoIB;
+    public Servo servoIF;
 
 
     //Sensors   FORMAT public Sensor Type name;
@@ -34,11 +41,15 @@ public class RobotHardware {
         backLeftDrive = hardwareMap.get(DcMotor.class, "motorBL");
         backRightDrive = hardwareMap.get(DcMotor.class, "motorBR");
 
-        // Mechanism Motors
 
+        // Mechanism Motors
+        motorIntake = hardwareMap.get(DcMotor.class, "motorIntake");
+        motorTurret = hardwareMap.get(DcMotor.class, "motorTurret");
+        motorFlywheel = hardwareMap.get(DcMotor.class, "motorFlywheel");
 
         // Servos
-
+        servoIB = hardwareMap.get(Servo.class, "servoIB");
+        servoIF = hardwareMap.get(Servo.class, "servoIF");
 
         // Sensors
         odo = hardwareMap.get(
@@ -62,6 +73,7 @@ public class RobotHardware {
 
 
         // Launcher Configuration
+        motorFlywheel.setDirection(DcMotorSimple.Direction.REVERSE);
 
 
         // Initialize Servos
