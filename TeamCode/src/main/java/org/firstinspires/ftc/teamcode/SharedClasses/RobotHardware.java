@@ -18,12 +18,9 @@ public class RobotHardware {
 
     //Mechanism Motors
     public DcMotor motorIntake;
-    public DcMotor motorTurret;
-    public DcMotor motorFlywheel;
+   // public DcMotor motorTurret;
 
     //Servos -  Format  - public Servo name; - or public CRServo name; -
-    public Servo servoIB;
-    public Servo servoIF;
 
 
     //Sensors   FORMAT public Sensor Type name;
@@ -44,12 +41,10 @@ public class RobotHardware {
 
         // Mechanism Motors
         motorIntake = hardwareMap.get(DcMotor.class, "motorIntake");
-        motorTurret = hardwareMap.get(DcMotor.class, "motorTurret");
-        motorFlywheel = hardwareMap.get(DcMotor.class, "motorFlywheel");
+       // motorTurret = hardwareMap.get(DcMotor.class, "motorTurret");
 
         // Servos
-        servoIB = hardwareMap.get(Servo.class, "servoIB");
-        servoIF = hardwareMap.get(Servo.class, "servoIF");
+
 
         // Sensors
         odo = hardwareMap.get(
@@ -73,7 +68,7 @@ public class RobotHardware {
 
 
         // Launcher Configuration
-        motorFlywheel.setDirection(DcMotorSimple.Direction.REVERSE);
+        //motorFlywheel.setDirection(DcMotorSimple.Direction.REVERSE);
 
 
         // Initialize Servos
