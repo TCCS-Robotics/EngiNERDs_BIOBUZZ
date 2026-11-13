@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.SharedClasses.MecanumDrive_Smooth;
 import org.firstinspires.ftc.teamcode.SharedClasses.RobotHardware;
+import org.firstinspires.ftc.teamcode.SharedClasses.AprilTagTargeting_Turret;
 
 
 @TeleOp(name = "TeleOp", group = "Robot")
@@ -14,9 +15,36 @@ public class Teleop extends OpMode {
     //Import Hardware Class & Mecanum Drive Class
     RobotHardware robot = new RobotHardware();
     MecanumDrive_Smooth drive;
+    private AprilTagTargeting_Turret targeting;
+    private AprilTagTargeting_Turret.Alliance alliance = AprilTagTargeting_Turret.Alliance.RED; // Default if no selection is made
+    private AprilTagTargeting_Turret.AimMode aimMode = AprilTagTargeting_Turret.AimMode.CLUSTER_CENTER;
 
     //Variables
     private boolean previousResetButton = false;
+
+    /////////////////////     VARIABLES for Velocity Stepper     /////////////////////
+    // These variables live OUTSIDE loop() so their values survive each loop.
+
+    // START OF Velocity Toggling and Adjustment Variables
+    private static final double RPM_STEP = 100.0; // RPM changed per D-pad press
+    private static final double MAX_RPM = 6000.0; // Adjustable upper safety limit
+    private static final double READY_TOLERANCE = 0.05; // Within 5% of target
+
+    // These values must persist between loop() calls; local loop variables reset
+    // on every iteration and would not remember the selected speed or ON/OFF state.
+    private double targetRPM = 0.0; //Starting Target RPM
+
+    // Remember the PREVIOUS button state to detect a NEW press (rising edge).
+    private boolean previousUp = false; //Checks to see if D Pad UP Button is still held or was released and then pressed again
+    private boolean previousDown = false; //Checks to see if D Pad Down Button is still held or was released and then pressed again
+
+    /////////////////////     VARIABLES for Toggle Button    /////////////////////
+    // These variables live OUTSIDE loop() so their values survive each loop.
+
+    private boolean flywheelOn = false; //Starting flywheel State is Off
+    // Remember the PREVIOUS button state to detect a NEW press (rising edge).
+    private boolean previousA = false; //Checks to see if A button is still held or was released and then pressed again
+    // END OF Velocity Toggling and Adjustment Variables
 
 
     @Override
@@ -25,8 +53,33 @@ public class Teleop extends OpMode {
     //Initialize Hardware and Mecanum Drive Classes
         robot.init(hardwareMap);
         drive = new MecanumDrive_Smooth(robot);
+        targeting = new AprilTagTargeting_Turret(robot.limelight);
+        robot.limelight.pipelineSwitch(0); // AprilTag pipeline; verify pipeline number.
 
    }
+
+    // Called repeatedly while the Driver Hub shows INIT, before PLAY.
+    @Override
+    public void init_loop() {
+        if (gamepad2.dpad_left) {
+            alliance = AprilTagTargeting_Turret.Alliance.RED;
+        } else if (gamepad2.dpad_right) {
+            alliance = AprilTagTargeting_Turret.Alliance.BLUE;
+        }
+
+        telemetry.addLine("=== SELECT ALLIANCE BEFORE PLAY ===");
+        telemetry.addLine("Gamepad 2: D-pad LEFT = RED");
+        telemetry.addLine("Gamepad 2: D-pad RIGHT = BLUE");
+        telemetry.addData("SELECTED ALLIANCE", alliance);
+        telemetry.addLine("Press PLAY to lock this selection for the match.");
+        telemetry.addLine("Default is RED if no selection is made.");
+        telemetry.update();
+    }
+
+    @Override
+    public void start() {
+        robot.limelight.start();
+    }
 
     @Override
     /////////////// TeleOp Loop ////////////////////////////////////
@@ -35,29 +88,116 @@ public class Teleop extends OpMode {
         // Update Pinpoint
         robot.odo.update();
 
-
-    //////////////   LAUNCHER   //////////////
-   /* if (gamepad1.left_trigger > 0) {
-        robot.motorFlywheel.setPower(.5);
-    }
-    else {
-        robot.motorFlywheel.setPower(0);
-    }
-       */
-    //////////////   INTAKE   //////////////
-        if (gamepad2.right_trigger > 0 && gamepad2.left_trigger == 0) {
-            robot.motorIntake.setPower(1);
+/////////////////////////////////   INTAKE   /////////////////////////////////////////////
+        if (gamepad2.right_trigger > 0 && gamepad1.left_trigger == 0) {
+            robot.intake.setPower(1);
         }
-        else if (gamepad2.left_trigger > 0 && gamepad2.right_trigger == 0) {
-            robot.motorIntake.setPower(-1);
+        else if (gamepad2.left_trigger > 0 && gamepad1.right_trigger == 0) {
+            robot.intake.setPower(-1);
         }
         else {
-            robot.motorIntake.setPower(0);
+            robot.intake.setPower(0);
+        }
+        // Servos to Lift and Lower Arm to move elemnts into Flywheel
+        if (gamepad2.x && !gamepad2.left_bumper) {      // Lowered Position
+            robot.AL.setPosition(-0.9);
+            robot.AR.setPosition(-0.9);
+        }
+        if (gamepad2.y) {  // Raised Position
+            robot.AL.setPosition(0.25);
+            robot.AR.setPosition(0.25);
+        }
+/////////////////////////////////////////////////////////////////////////////////////
+//////////////////             Turret & Slider                      /////////////////////
+///////////////////////////////////////////////////////////////////////////////////
+        // Alliance was chosen during INIT and stays locked throughout TeleOp.
+
+        // Hold left bumper to access aim-mode selection without changing arm position.
+        if (gamepad2.left_bumper && gamepad2.x) {
+            aimMode = AprilTagTargeting_Turret.AimMode.CLUSTER_CENTER;
+        }
+        if (gamepad2.left_bumper && gamepad2.b) {
+            aimMode = AprilTagTargeting_Turret.AimMode.SCORING_OPENING;
         }
 
+        // Limelight is assumed to be mounted on and rotate with the turret.
+        // Calculate every loop, but move only while operator holds right bumper.
+        AprilTagTargeting_Turret.AimResult aim = targeting.calculate(alliance, aimMode);
+        double turretPower = gamepad2.right_bumper && aim.valid ? aim.motorPower : 0.0;
+        robot.turret.setPower(turretPower);
 
 
-    ////////////////////////    Drive Code - Game Pad 1       //////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
+//////////////////              Flywheel                       /////////////////////
+///////////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///           Velocity Increase/Decrease using Dpad Up and Down          ///
+    ////////////////////////////////////////////////////////////////////////////
+        // Check TWO conditions:
+        // 1. gamepad2.dpad_up/down is TRUE (the button is being pressed).
+        // 2. !previousUp/Down is TRUE (the button was NOT pressed last loop).
+
+        //The ! operator reverses a boolean value.
+
+        // Increase target RPM when D-pad UP is newly pressed. (not held down - rising edge)
+        if (gamepad2.dpad_up && !previousUp) {
+            targetRPM = Math.min(MAX_RPM, targetRPM + RPM_STEP);
+        }
+
+        // Decrease target RPM when D-pad DOWN is newly pressed. (not held down - rising edge)
+        if (gamepad2.dpad_down && !previousDown) {
+            targetRPM = Math.max(0, targetRPM - RPM_STEP);
+        }
+
+        // Save button states for the next loop.
+        previousUp = gamepad2.dpad_up;
+        previousDown = gamepad2.dpad_down;
+
+        // Convert target RPM into encoder ticks per second.
+        // FTC setVelocity() uses ticks per second, not RPM.
+        //FORMULA:  TPS = RPM * TICKS_PER_REV / 60
+        //We multiply by ticks per revolution to convert revolutions into encoder ticks. We divide by 60 because there are 60 seconds in one minute.
+        double targetTPS = targetRPM * RobotHardware.flywheel_TICKS_PER_REV / 60.0;
+        /////////////////////////////////////////////////////////////////////////////
+        ///                Toggle Flywheel on and Off using A button             ///
+        ////////////////////////////////////////////////////////////////////////////
+
+        // Toggle flywheel ON or OFF with each new A button press. (not held down - rising edge)
+        //The ! operator reverses a boolean value.
+        if (gamepad2.a && !previousA) {
+            flywheelOn = !flywheelOn;
+        }
+
+        // Save A button state for the next loop
+        previousA = gamepad2.a;
+
+        // Determine the commanded RPM based on ON/OFF state.
+        // If ON, use targetRPM. If OFF, use zero.
+        double commandedRPM = flywheelOn ? targetRPM : 0.0; //
+        robot.flywheel.setVelocity(flywheelOn ? targetTPS : 0.0); //reads as If flywheel on
+
+        /////////////////////////////////////////////////////////////////////////////
+        ///                   FLYWHEEL ENCODER FEEDBACK                          ///
+        ////////////////////////////////////////////////////////////////////////////
+        // Read actual motor speed in encoder ticks per second.
+        double actualTPS = robot.flywheel.getVelocity();
+        // Convert actual motor speed to RPM.
+        double actualRPM = actualTPS * 60.0 / RobotHardware.flywheel_TICKS_PER_REV;
+        // Calculate difference between commanded and actual RPM.
+        double errorRPM = commandedRPM - actualRPM;
+        // Check whether flywheel is within the allowed speed range. If it is it's "Ready"
+        boolean ready = flywheelOn && commandedRPM > 0
+                && Math.abs(errorRPM) <= commandedRPM * READY_TOLERANCE;
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+////////////////////////    Drive Code - Game Pad 1       //////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
    // Back = Reset Position
         if (gamepad1.back && !previousResetButton) {
             robot.odo.resetPosAndIMU();
@@ -84,20 +224,42 @@ public class Teleop extends OpMode {
             drive.driveFieldRelative(forward, right, rotate);
         }
 
+////////////////////////    TELEMETRY        //////////////////////////
 
-
-
-    ////////////////////////    TELEMETRY        //////////////////////////
-        telemetry.addLine("Press Back to reset Yaw");
-        telemetry.addLine("Hold Left Bumper for Robot Centric");
-        telemetry.addLine("Hold Right Trigger for Slow Mode");
-        telemetry.addLine("Left joystick sets robot direction");
-        telemetry.addLine("Right joystick turns the robot");
+        telemetry.addData("Hive alliance", alliance);
+        telemetry.addData("Turret aim mode", aimMode);
+        telemetry.addData("Turret aim status", aim.status);
+        telemetry.addData("Cluster first tag ID", aim.firstTagId);
+        telemetry.addData("Cluster tags visible", aim.count);
+        telemetry.addData("Turret error (deg)", "%.2f", aim.errorDeg);
+        telemetry.addData("Turret power", "%.2f", turretPower);
+        telemetry.addData("Flywheel ready", ready);
         telemetry.addData("Heading",robot.odo.getHeading(AngleUnit.RADIANS));
+        telemetry.addData("Motor", flywheelOn ? "ON" : "OFF");
+        telemetry.addData("Selected RPM", "%.0f", targetRPM);
+        telemetry.addData("Commanded RPM", "%.0f", commandedRPM);
+        telemetry.addData("Actual RPM", "%.0f", actualRPM);
+        telemetry.addLine("Gamepad 2: A toggles Flywheel on/off");
+        telemetry.addLine("Gamepad 2: D-pad Up/Down changes RPM");
+        telemetry.addLine("Hive alliance locked at PLAY (selected during INIT)");
+        telemetry.addLine("Gamepad 2: LB+X center, LB+B scoring opening");
+        telemetry.addLine("Gamepad 2: Hold RB to aim turret");
+        telemetry.addLine("Game Pad 1: Press Back to reset Yaw");
+        telemetry.addLine("Game Pad 1: Hold Left Bumper for Robot Centric");
+        telemetry.addLine("Game Pad 1: Hold Right Trigger for Slow Mode");
         telemetry.update();
 
 
     }//Closes TeleOp Loop
+
+    @Override
+    public void stop() {
+        robot.turret.setPower(0);
+        robot.intake.setPower(0);
+        robot.flywheel.setVelocity(0);
+        drive.stop();
+        robot.limelight.stop();
+    }
 
 ////////////////////////////////// ENTER FUNCTIONS HERE//////////////////////////////////////
 

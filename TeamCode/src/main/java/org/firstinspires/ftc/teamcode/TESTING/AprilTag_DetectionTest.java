@@ -8,9 +8,8 @@ import org.firstinspires.ftc.teamcode.SharedClasses.MecanumDrive;
 import org.firstinspires.ftc.teamcode.SharedClasses.RobotHardware;
 
 
-@Disabled
-@TeleOp(name = "April Tag Detection Test", group = "Robot")
 //@Disabled
+@TeleOp(name = "April Tag Detection Test", group = "Robot")
 public class AprilTag_DetectionTest extends OpMode {
     //Import Hardware Class & Mecanum Drive Class
     RobotHardware robot = new RobotHardware();

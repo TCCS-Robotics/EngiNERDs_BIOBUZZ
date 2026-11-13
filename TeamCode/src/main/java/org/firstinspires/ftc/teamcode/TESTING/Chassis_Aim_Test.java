@@ -1,14 +1,12 @@
 package org.firstinspires.ftc.teamcode.TESTING;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.teamcode.TESTING.AprilTagTargeting;
 import org.firstinspires.ftc.teamcode.SharedClasses.MecanumDrive;
 import org.firstinspires.ftc.teamcode.SharedClasses.RobotHardware;
 
-@Disabled
+//@Disabled
 @TeleOp(name = "Limelight Chassis Aim Test", group = "Vision")
 public class Chassis_Aim_Test extends LinearOpMode {
     @Override public void runOpMode() {
@@ -40,7 +38,7 @@ public class Chassis_Aim_Test extends LinearOpMode {
                 double right = gamepad1.left_stick_x;
                 double rotate = gamepad1.right_stick_x;
                 AprilTagTargeting.AimResult aim = targeting.calculate(cluster, mode);
-                if (gamepad1.right_bumper) rotate = aim.valid ? aim.rotation : 0.0;
+                if (gamepad2.right_bumper) rotate = aim.valid ? aim.rotation : 0.0;
                 drive.driveFieldRelative(forward, right, rotate);
 
                 telemetry.addData("Cluster", cluster);

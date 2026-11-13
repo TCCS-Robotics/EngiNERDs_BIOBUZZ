@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.SharedClasses;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -19,16 +20,22 @@ public class RobotHardware {
 
 
     //Mechanism Motors
-    public DcMotor motorIntake;
-   // public DcMotor motorTurret;
-   public DcMotorEx flywheel; // Motor for FLYWHEEL - Needs to be DcMotorEX to use Velocity Feature of encoders
+    public DcMotor intake;
+    public DcMotor turret; // Turret rotation motor
+    public DcMotorEx flywheel; // Motor for FLYWHEEL - Needs to be DcMotorEX to use Velocity Feature of encoders
 
     //Servos -  Format  - public Servo name; - or public CRServo name; -
+    public Servo AL;
+    public Servo AR;
+    public Servo SL;
+    public Servo SR;
+
 
 
     //Sensors   FORMAT public Sensor Type name;
     public GoBildaPinpointDriver odo;  //Pinpoint for Field Centric & Odometry
     public Limelight3A limelight;  //Camera for April Tag Detection
+    public RevColorSensorV3 colorSensor;
 
 
     ///////////////////     STATIC VARIABLES     ///////////////////////
@@ -47,16 +54,20 @@ public class RobotHardware {
 
 
         // Mechanism Motors
-        motorIntake = hardwareMap.get(DcMotor.class, "motorIntake");
-       // motorTurret = hardwareMap.get(DcMotor.class, "motorTurret");
+        intake = hardwareMap.get(DcMotor.class, "intake");
+        turret = hardwareMap.get(DcMotor.class, "turret");
         flywheel = hardwareMap.get(DcMotorEx.class,"flywheel");
 
         // Servos
+        AL = hardwareMap.get(Servo.class,"AL");
+        AR = hardwareMap.get(Servo.class,"AR");
+
 
 
         // Sensors
-        odo = hardwareMap.get(
-                GoBildaPinpointDriver.class, "odo");
+        odo = hardwareMap.get(GoBildaPinpointDriver.class, "odo");
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        colorSensor = hardwareMap.get(RevColorSensorV3.class, "colorSensor");
 
         // Motor Directions
         frontLeftDrive.setDirection(DcMotor.Direction.REVERSE);
@@ -72,11 +83,25 @@ public class RobotHardware {
         backRightDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
 
-        // Servo Directions
+        // Servo Configuration
+        //Directions
+        AL.setDirection(Servo.Direction.REVERSE);
+        AR.setDirection(Servo.Direction.FORWARD);
 
+        //Starting position
+        AL.setPosition(-0.9); // FTC servo positions must be 0.0 to 1.0; verify desired start
+        AR.setPosition(-0.9); // Verify desired start position
+
+
+        // Turret: start stopped, brake when power is released.
+        // Encoder position is not reset here; add calibrated limits before full-speed use.
+        turret.setDirection(DcMotor.Direction.REVERSE);
+        turret.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        turret.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        turret.setPower(0);
 
         // flywheel Configuration
-        flywheel.setDirection(DcMotorSimple.Direction.FORWARD);
+        flywheel.setDirection(DcMotor.Direction.FORWARD);
 
         //Set Brake Behavior - This allows the flywheel to gradually slow down instead of immediately breaking
         flywheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
@@ -89,7 +114,6 @@ public class RobotHardware {
         flywheel.setVelocity(0);
 
 
-        // Initialize Servos
 
 
         // Reset Odometry
